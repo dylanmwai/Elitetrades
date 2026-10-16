@@ -1,0 +1,57 @@
+//@version=5
+indicator("Custom ZigZag Signals & Targets", overlay=true, max_labels_count=500, max_lines_count=500)
+
+// --- Inputs ---
+depth  = input.int(12, title="ZigZag Depth", minval=1)
+deviation = input.int(5, title="ZigZag Deviation", minval=1)
+tp_ratio = input.float(2.0, title="Take Profit Ratio (R:R)")
+
+// --- ZigZag Logic ---
+var float[] ph_val = array.new_float(0)
+var int[]   ph_bar = array.new_int(0)
+var float[] pl_val = array.new_float(0)
+var int[]   pl_bar = array.new_int(0)
+
+ph = ta.pivothigh(high, depth, depth)
+pl = ta.pivotlow(low, depth, depth)
+
+var line zigzag_line = na
+var int last_dir = 0 // 1 for high, -1 for low
+var float last_price = na
+var int last_bar = na
+
+if not na(ph)
+    if last_dir != 1
+        // New High Segment
+        zigzag_line := line.new(x1=last_bar, y1=last_price, x2=bar_index - depth, y2=ph, color=color.black, width=2)
+        
+        // Sell Signal Marker (Red Triangle Down)
+        label.new(x=bar_index - depth, y=ph, text="Sell\n▼", style=label.style_label_down, 
+                  color=color.red, textcolor=color.white, size=size.small)
+        
+        last_dir := 1
+        last_price := ph
+        last_bar := bar_index - depth
+    else if ph > last_price
+        // Update Higher High
+        line.set_xy2(zigzag_line, bar_index - depth, ph)
+        last_price := ph
+        last_bar := bar_index - depth
+
+if not na(pl)
+    if last_dir != -1
+        // New Low Segment
+        zigzag_line := line.new(x1=last_bar, y1=last_price, x2=bar_index - depth, y2=pl, color=color.black, width=2)
+        
+        // Target / Exit Label
+        label.new(x=bar_index - depth, y=pl, text="Close entry order sell", style=label.style_label_up, 
+                  color=color.green, textcolor=color.white, size=size.small)
+        
+        last_dir := -1
+        last_price := pl
+        last_bar := bar_index - depth
+    else if pl < last_price
+        // Update Lower Low
+        line.set_xy2(zigzag_line, bar_index - depth, pl)
+        last_price := pl
+        last_bar := bar_index - depth
